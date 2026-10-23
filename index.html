@@ -1,0 +1,780 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#0b6e66">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Daily Jobs">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b6e66'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<title>Daily Jobs</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow ledger column. Date and progress up top, an entry form, then a single ruled list of jobs. */
+:root {
+  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  --bg: #edf0f1;
+  --surface: #fbfcfc;
+  --ink: #13202a;
+  --muted: #5b6b76;
+  --line: #d3dade;
+  --accent: #0b6e66;
+  --accent-ink: #ffffff;
+  --accent-soft: #d9ece9;
+  --hi: #b4321f;
+  --hi-soft: #f6dcd6;
+  --mid: #7d5200;
+  --mid-soft: #f5e7c5;
+  --lo: #3d5a80;
+  --lo-soft: #dce6f2;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171c; --surface: #172229; --ink: #e6eef2; --muted: #93a5af; --line: #2a3a43;
+    --accent: #3fc1b3; --accent-ink: #06211e; --accent-soft: #143733;
+    --hi: #ff8a75; --hi-soft: #3b1f1a; --mid: #e7b84c; --mid-soft: #3a2f12; --lo: #8fb4e6; --lo-soft: #1b2a3d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171c; --surface: #172229; --ink: #e6eef2; --muted: #93a5af; --line: #2a3a43;
+  --accent: #3fc1b3; --accent-ink: #06211e; --accent-soft: #143733;
+  --hi: #ff8a75; --hi-soft: #3b1f1a; --mid: #e7b84c; --mid-soft: #3a2f12; --lo: #8fb4e6; --lo-soft: #1b2a3d;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+.wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 18px 32px; }
+.top > * { min-width: 0; }
+.eyebrow { margin: 0 0 4px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(2rem, 7vw, 2.9rem); line-height: 1.02; letter-spacing: -.02em; text-wrap: balance; }
+.spaces { display: inline-flex; gap: 4px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; align-self: flex-start; max-width: 100%; }
+.spaces button { border: 0; background: transparent; color: var(--muted); padding: 7px 18px; border-radius: 999px; font-weight: 600; font-size: 14px; white-space: nowrap; }
+.spaces button:hover { color: var(--ink); }
+.spaces button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.progress { flex: 1 1 240px; max-width: 340px; }
+.pnum { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); display: flex; align-items: baseline; gap: 8px; }
+.pnum b { font-family: var(--font-display); font-size: 2rem; line-height: 1; color: var(--ink); font-weight: 700; }
+.bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin: 8px 0 6px; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s ease; }
+#pnote { margin: 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+
+form#jobForm { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px 12px; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.f { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.f label, .f .lbl { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.f-title { grid-column: 1 / -1; }
+.f-time { grid-column: span 2; } .f-pri { grid-column: span 2; } .f-date { grid-column: span 2; }
+.f-cat { grid-column: span 3; } .f-notes { grid-column: span 3; }
+.f-foot { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+input[type=text], input[type=time], input[type=date], select, textarea {
+  font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 6px; padding: 9px 10px; width: 100%; min-width: 0; min-height: 40px;
+}
+input[type=text]#fTitle { font-size: 16px; padding: 11px 12px; }
+input::placeholder { color: var(--muted); opacity: .8; }
+.check-inline { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.check-inline input { width: 18px; height: 18px; accent-color: var(--accent); }
+.btns { display: flex; gap: 8px; margin-left: auto; }
+button { font: inherit; cursor: pointer; }
+.btn { border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); font-weight: 600; border-radius: 6px; padding: 9px 18px; min-height: 40px; }
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); font-weight: 500; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.tools { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab { background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 999px; padding: 6px 14px; font-size: 14px; display: inline-flex; gap: 6px; align-items: baseline; }
+.tab span { font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+.tab[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 300px; justify-content: flex-end; }
+.filters select { width: auto; flex: 0 1 180px; min-height: 38px; padding-block: 6px; }
+.search { flex: 1 1 160px; max-width: 240px; }
+.search input { min-height: 38px; padding-block: 6px; }
+
+.syncnote { margin: 0; padding: 10px 14px; border: 1px solid var(--hi); border-radius: 8px; background: var(--hi-soft); color: var(--hi); font-size: 13.5px; font-weight: 500; }
+#msg { margin: 0; font-size: 13px; color: var(--hi); min-height: 0; }
+#msg:empty { display: none; }
+ul#list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.job { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; padding: 14px 16px; border-top: 1px solid var(--line); align-items: start; }
+.job:first-child { border-top: 0; }
+.job[data-s="doing"] { background: var(--accent-soft); }
+.job[data-s="done"] .title { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+.job[data-s="done"] .meta, .job[data-s="done"] .notes { opacity: .7; }
+.tick { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--muted); background: transparent; padding: 0; position: relative; margin-top: 1px; }
+.tick:hover { border-color: var(--accent); }
+.job[data-s="doing"] .tick { border-color: var(--accent); background: linear-gradient(90deg, var(--accent) 50%, transparent 50%); }
+.job[data-s="done"] .tick { background: var(--accent); border-color: var(--accent); }
+.job[data-s="done"] .tick::after { content: ""; position: absolute; left: 7px; top: 3px; width: 6px; height: 11px; border: solid var(--accent-ink); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.body { min-width: 0; }
+.title { font-weight: 600; font-size: 16px; overflow-wrap: anywhere; }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; margin-top: 3px; font-size: 13px; color: var(--muted); }
+.time { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink); font-size: 13px; }
+.pill { font-size: 11.5px; font-weight: 600; letter-spacing: .02em; padding: 1px 8px; border-radius: 999px; background: var(--line); color: var(--ink); white-space: nowrap; }
+.pill.p1 { background: var(--hi-soft); color: var(--hi); }
+.pill.p2 { background: var(--mid-soft); color: var(--mid); }
+.pill.p3 { background: var(--lo-soft); color: var(--lo); }
+.pill.late { background: var(--hi); color: var(--bg); }
+.pill.ex { background: transparent; border: 1px dashed var(--muted); color: var(--muted); font-weight: 500; }
+.notes { margin: 4px 0 0; font-size: 13.5px; color: var(--muted); overflow-wrap: anywhere; }
+.acts { grid-column: 2; display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 2px; }
+.tbtn { background: none; border: 0; padding: 4px 0; color: var(--muted); font-size: 13px; min-height: 28px; }
+.tbtn:hover { color: var(--ink); text-decoration: underline; }
+.tbtn.danger.armed { color: var(--hi); font-weight: 600; }
+textarea { resize: vertical; line-height: 1.45; }
+.f-sub { grid-column: 1 / -1; }
+.subs { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.sub { display: flex; align-items: center; gap: 10px; min-height: 32px; }
+.sub input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); flex: none; margin: 0; }
+.sub .st { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
+.sub.d .st { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+.sub .x { background: none; border: 0; color: var(--muted); font-size: 18px; line-height: 1; padding: 2px 8px; min-height: 28px; }
+.sub .x:hover { color: var(--hi); }
+.addsub { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+.addsub input { flex: 1; min-width: 0; font-size: 14px; min-height: 36px; padding: 6px 10px; }
+.addsub .btn { min-height: 36px; padding: 6px 14px; }
+.mini { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.mini i { display: inline-block; width: 44px; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; position: relative; }
+.mini i b { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
+.empty { padding: 36px 20px; text-align: center; color: var(--muted); }
+.empty b { display: block; font-family: var(--font-display); font-size: 1.15rem; color: var(--ink); margin-bottom: 4px; }
+.foot { display: flex; justify-content: flex-end; min-height: 0; }
+.foot:empty { display: none; }
+
+@media (max-width: 560px) {
+  form#jobForm { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .f-time, .f-pri { grid-column: span 1; }
+  .f-date, .f-cat, .f-notes { grid-column: 1 / -1; }
+  .btns { width: 100%; } .btns .btn { flex: 1; }
+  .search { max-width: none; }
+  .filters select { flex: 1 1 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+
+/* standalone page basics */
+[hidden] { display: none !important; }
+body { margin: 0; padding-block: max(28px, env(safe-area-inset-top, 0px)) max(56px, env(safe-area-inset-bottom, 0px)); }
+img { max-width: 100%; }
+input[type=password] {
+  font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 6px; padding: 9px 10px; width: 100%; min-width: 0; min-height: 40px;
+}
+.navrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.sync { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.sync.bad { color: var(--hi); }
+.setup { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: clamp(18px, 4vw, 28px); display: flex; flex-direction: column; gap: 14px; }
+.setup .lead { margin: 0; color: var(--muted); max-width: 60ch; }
+.steps { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 6px; max-width: 62ch; }
+.steps code { font-family: var(--font-mono); font-size: .9em; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+#setupForm { display: flex; flex-direction: column; gap: 12px; max-width: 520px; }
+#setupForm .btn { align-self: flex-start; }
+#setupMsg { margin: 0; font-size: 13px; color: var(--hi); overflow-wrap: anywhere; }
+#setupMsg:empty { display: none; }
+.hint { margin: 0; font-size: 13px; color: var(--muted); max-width: 60ch; }
+.settings { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: center; }
+.settings input { flex: 1 1 100%; font-family: var(--font-mono); font-size: 12px; }
+.note { margin: 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.note:empty { display: none; }
+</style>
+
+</head>
+<body>
+<main class="wrap">
+  <section class="setup" id="setup" hidden>
+    <div>
+      <p class="eyebrow">First time on this device</p>
+      <h1>Daily Jobs</h1>
+    </div>
+    <p class="lead">Your jobs are saved in your own Google Sheet, so every phone or computer you connect shows the same list.</p>
+    <ol class="steps">
+      <li>Create a blank Google Sheet.</li>
+      <li>Open <b>Extensions &rsaquo; Apps Script</b>, paste the code from <code>code.gs</code>, and change the <code>SECRET</code> line to a password you choose.</li>
+      <li>Choose <b>Deploy &rsaquo; New deployment &rsaquo; Web app</b>. Set <b>Execute as</b> to Me and <b>Who has access</b> to Anyone, then deploy.</li>
+      <li>Paste the Web app URL and your secret below.</li>
+    </ol>
+    <form id="setupForm" autocomplete="off">
+      <div class="f"><label for="sUrl">Web app URL</label>
+        <input type="text" id="sUrl" placeholder="Starts with https://script.google.com" spellcheck="false" autocapitalize="off"></div>
+      <div class="f"><label for="sKey">Secret</label>
+        <input type="password" id="sKey" placeholder="The SECRET from your script" autocapitalize="off"></div>
+      <button class="btn" type="submit">Connect</button>
+      <p id="setupMsg" role="status"></p>
+    </form>
+    <p class="hint">Already connected on another device? Open the link from its <b>Copy link for other devices</b> button instead of filling this in.</p>
+  </section>
+  <div class="navrow"><nav class="spaces" id="spaces" aria-label="Page"></nav><span class="sync" id="syncState" role="status"></span></div>
+
+  <header class="top">
+    <div>
+      <p class="eyebrow" id="weekday"></p>
+      <h1 id="spaceTitle">Daily Job</h1>
+    </div>
+    <div class="progress" aria-live="polite">
+      <div class="pnum"><b id="pdone">0</b><span>of <span id="ptotal">0</span> done today</span></div>
+      <div class="bar"><i id="pbar"></i></div>
+      <p id="pnote"></p>
+    </div>
+  </header>
+
+  <form id="jobForm" autocomplete="off">
+    <div class="f f-title">
+      <label for="fTitle" id="formHead">New job</label>
+      <input type="text" id="fTitle" placeholder="What needs doing?" maxlength="160" required>
+    </div>
+    <div class="f f-time"><label for="fTime">Time</label><input type="time" id="fTime"></div>
+    <div class="f f-pri"><label for="fPri">Priority</label>
+      <select id="fPri"><option value="1">High</option><option value="2" selected>Medium</option><option value="3">Low</option></select>
+    </div>
+    <div class="f f-date"><label for="fDate">Date</label><input type="date" id="fDate"></div>
+    <div class="f f-cat"><label for="fCat">Category</label>
+      <input type="text" id="fCat" list="cats" placeholder="Work, Meeting, Errand..." maxlength="40">
+      <datalist id="cats"><option value="Work"><option value="Meeting"><option value="Admin"><option value="Errand"><option value="Personal"></datalist>
+    </div>
+    <div class="f f-notes"><label for="fNotes">Notes</label><input type="text" id="fNotes" placeholder="Optional" maxlength="300"></div>
+    <div class="f f-sub">
+      <label for="fSubs">Breakdown into sub-jobs (one per line)</label>
+      <textarea id="fSubs" rows="3" maxlength="2000" placeholder="Collect the data&#10;Write the summary&#10;Send to client"></textarea>
+    </div>
+    <div class="f-foot">
+      <label class="check-inline"><input type="checkbox" id="fDaily"> Repeats every day</label>
+      <div class="btns">
+        <button type="button" class="btn ghost" id="cancelEdit" hidden>Cancel</button>
+        <button type="submit" class="btn" id="submitBtn">Add job</button>
+      </div>
+    </div>
+  </form>
+
+  <section aria-label="Jobs" style="display:flex;flex-direction:column;gap:12px">
+    <div class="tools">
+      <div class="tabs" id="tabs"></div>
+      <div class="filters">
+        <label class="lbl" for="catSel" style="position:absolute;left:-9999px">Filter by category</label>
+        <select id="catSel"><option value="">All categories</option></select>
+        <div class="search"><label class="lbl" for="q" style="position:absolute;left:-9999px">Search jobs</label><input type="text" id="q" placeholder="Search jobs"></div>
+      </div>
+    </div>
+    <p id="msg" role="status"></p>
+    <ul id="list"></ul>
+    <div class="foot" id="foot"></div>
+    <div class="settings" id="settings"></div>
+    <p class="note" id="note" role="status"></p>
+  </section>
+</main>
+
+<script>
+(function () {
+  var $ = function (s) { return document.querySelector(s); };
+  function h(tag, props) {
+    var e = document.createElement(tag), k, v, kids = Array.prototype.slice.call(arguments, 2);
+    props = props || {};
+    for (k in props) {
+      v = props[k];
+      if (k === 'class') e.className = v;
+      else if (k.indexOf('on') === 0) e.addEventListener(k.slice(2), v);
+      else if (v === true) e.setAttribute(k, '');
+      else if (v !== false && v != null) e.setAttribute(k, v);
+    }
+    kids.forEach(function add(c) {
+      if (c == null || c === false) return;
+      if (Array.isArray(c)) { c.forEach(add); return; }
+      e.append(c.nodeType ? c : document.createTextNode(c));
+    });
+    return e;
+  }
+  function p2(n) { return String(n).padStart(2, '0'); }
+  function ymd(d) { return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
+  function nowHM() { var d = new Date(); return p2(d.getHours()) + ':' + p2(d.getMinutes()); }
+  function fmtDate(s) {
+    var a = s.split('-');
+    return new Date(+a[0], +a[1] - 1, +a[2]).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  }
+
+  var today = ymd(new Date());
+  var jobs = [], loaded = false;
+  var view = 'today', q = '', editingId = null, armedId = null, armedTimer = null, armedClear = false;
+  var addingId = null, addDraft = '', focusAdd = false;
+  var cat = '', catSig = null;
+  var LSS = 'daily-jobs-space', space = 'job';
+  try { var ss = localStorage.getItem(LSS); if (ss === 'job' || ss === 'life') space = ss; } catch (e) {}
+  try { var hh0 = (location.hash || '').replace('#', ''); if (hh0 === 'job' || hh0 === 'life') space = hh0; } catch (e) {}
+  var LS = 'daily-jobs-v1', LSV = 'daily-jobs-view';
+  try { var sv = localStorage.getItem(LSV); if (sv) view = sv; } catch (e) {}
+
+  var PRI = { 1: 'High', 2: 'Medium', 3: 'Low' };
+  var VIEWS = [['today', 'Today'], ['upcoming', 'Upcoming'], ['all', 'All'], ['done', 'Done']];
+  var SPACES = {
+    job: { name: 'Daily Job', cats: ['Work', 'Meeting', 'Admin'], ph: 'Work, Meeting, Admin...' },
+    life: { name: 'Daily Life', cats: ['Personal', 'Health', 'Home', 'Family', 'Errand'], ph: 'Health, Home, Family...' }
+  };
+  function spaceOf(j) { return j.space === 'life' ? 'life' : 'job'; }
+  function scoped() { return jobs.filter(function (j) { return spaceOf(j) === space; }); }
+
+  function eff(j) { return (j.daily && j.statusOn !== today) ? 'todo' : (j.status || 'todo'); }
+  function inToday(j) {
+    var s = eff(j);
+    if (j.daily) return j.date <= today;
+    if (j.date === today) return true;
+    if (j.date < today) return s !== 'done' || j.statusOn === today;
+    return false;
+  }
+  function carried(j) { return !j.daily && j.date < today && eff(j) !== 'done'; }
+  function overdue(j) {
+    if (eff(j) === 'done' || carried(j)) return false;
+    var due = j.daily ? j.date <= today : j.date === today;
+    return due && j.time && j.time < nowHM();
+  }
+  function inView(j, v) {
+    if (v === 'today') return inToday(j);
+    if (v === 'upcoming') return j.date > today;
+    if (v === 'done') return eff(j) === 'done';
+    return true;
+  }
+  function catKey(j) { var c = (j.category || '').trim().toLowerCase(); return c || '__none'; }
+  function inCat(j) { return !cat || catKey(j) === cat; }
+  function matches(j) {
+    if (!inCat(j)) return false;
+    if (!q) return true;
+    var t = (j.title + ' ' + (j.category || '') + ' ' + (j.notes || '')).toLowerCase();
+    return t.indexOf(q) !== -1;
+  }
+  var RANK = { doing: 0, todo: 1, done: 2 };
+  function cmp(a, b) {
+    return (RANK[eff(a)] - RANK[eff(b)]) ||
+      (a.date < b.date ? -1 : a.date > b.date ? 1 : 0) ||
+      ((a.time || '99:99') < (b.time || '99:99') ? -1 : (a.time || '99:99') > (b.time || '99:99') ? 1 : 0) ||
+      ((a.priority || 2) - (b.priority || 2)) || ((a.created || 0) - (b.created || 0));
+  }
+
+  /* ---------- storage: this device's copy, synced to a Google Sheet through an Apps Script web app ---------- */
+  var LSC = 'daily-jobs-cfg', LSD = 'daily-jobs-cache', LSO = 'daily-jobs-outbox';
+  var cfg = null, outbox = [], flushing = false, pulling = false, flushTimer = null;
+  var netErr = false, lastErr = null, lastSync = '', linkText = '', armedDisc = false;
+
+  function lsGet(k, d) { try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  cfg = lsGet(LSC, null);
+  outbox = lsGet(LSO, []);
+  (function () {
+    var m = /[#&]cfg=([^&]+)/.exec(location.hash || '');
+    if (!m) return;
+    try {
+      var c = JSON.parse(decodeURIComponent(m[1]));
+      if (c && c.url && c.key) { cfg = { url: String(c.url), key: String(c.key) }; lsSet(LSC, cfg); }
+    } catch (e) {}
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  })();
+
+  function msg(t) { $('#msg').textContent = t || ''; }
+  function stamp() { var d = new Date(); lastSync = p2(d.getHours()) + ':' + p2(d.getMinutes()); }
+
+  function norm(j) {
+    return {
+      id: String(j.id), space: j.space === 'life' ? 'life' : 'job', title: String(j.title || ''),
+      date: String(j.date || ''), time: String(j.time || ''), priority: +j.priority || 2,
+      category: String(j.category || ''), daily: !!j.daily, status: j.status || 'todo',
+      statusOn: String(j.statusOn || ''), notes: String(j.notes || ''),
+      subs: (Array.isArray(j.subs) ? j.subs : []).map(function (x) { return { id: String(x.id), text: String(x.text), done: !!x.done }; }),
+      subsOn: String(j.subsOn || ''), created: +j.created || 0
+    };
+  }
+  function sig(list) {
+    return JSON.stringify(list.slice().sort(function (a, b) { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; }));
+  }
+
+  function api(body) {
+    var ctl = ('AbortController' in window) ? new AbortController() : null;
+    var timer = ctl ? setTimeout(function () { ctl.abort(); }, 30000) : 0;
+    return fetch(cfg.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ key: cfg.key }, body)),
+      signal: ctl ? ctl.signal : undefined
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      clearTimeout(timer);
+      if (!d || !d.ok) { var er = new Error((d && d.error) || 'failed'); er.bad = !!(d && d.error === 'bad key'); throw er; }
+      return d;
+    }, function (er) { clearTimeout(timer); throw er; });
+  }
+  function errText(e) {
+    return e && e.bad ? 'The secret does not match the one in your script.' :
+      'Could not reach the script. Check that it is deployed as a Web app with access set to Anyone, and that the URL ends with /exec.';
+  }
+
+  function queue(body) {
+    if (body.action === 'upsert') outbox = outbox.filter(function (b) { return !(b.action === 'upsert' && b.job.id === body.job.id); });
+    outbox.push(body); lsSet(LSO, outbox); flush();
+  }
+  function flush() {
+    if (!cfg || flushing || !outbox.length || (lastErr && lastErr.bad)) { renderSync(); return; }
+    flushing = true; clearTimeout(flushTimer); renderSync();
+    var b = outbox[0];
+    api(b).then(function () {
+      outbox = outbox.filter(function (x) { return x !== b; }); lsSet(LSO, outbox);
+      flushing = false; netErr = false; lastErr = null; stamp();
+      if (outbox.length) flush(); else renderSync();
+    }, function (e) {
+      flushing = false; netErr = true; lastErr = e; renderSync();
+      if (!e.bad) flushTimer = setTimeout(flush, 10000);
+    });
+  }
+  function pull(force) {
+    if (!cfg || flushing || pulling || outbox.length) return Promise.resolve();
+    pulling = true;
+    return api({ action: 'list' }).then(function (d) {
+      pulling = false;
+      if (!cfg || flushing || outbox.length) return;
+      var was = loaded, next = (d.jobs || []).map(norm), changed = sig(next) !== sig(jobs);
+      jobs = next; loaded = true; netErr = false; lastErr = null; stamp(); lsSet(LSD, jobs);
+      if (changed || force || !was) { if (addingId !== null) focusAdd = true; render(); } else renderSync();
+    }, function (e) { pulling = false; loaded = true; netErr = true; lastErr = e; render(); });
+  }
+
+  function save(job) {
+    msg('');
+    job = norm(job);
+    var i = jobs.findIndex(function (x) { return x.id === job.id; });
+    if (i < 0) jobs.push(job); else jobs[i] = job;
+    lsSet(LSD, jobs);
+    queue({ action: 'upsert', job: job });
+    render();
+  }
+  function remove(ids) {
+    msg('');
+    jobs = jobs.filter(function (x) { return ids.indexOf(x.id) < 0; });
+    lsSet(LSD, jobs);
+    queue({ action: 'delete', ids: ids });
+    render();
+  }
+
+  function showApp() {
+    var els = document.querySelectorAll('.wrap > *');
+    for (var i = 0; i < els.length; i++) els[i].hidden = els[i].id === 'setup' ? !!cfg : !cfg;
+  }
+  function renderSync() {
+    var el = $('#syncState'); if (!el) return;
+    var t = '', bad = false, n = outbox.length;
+    if (cfg) {
+      if (lastErr && lastErr.bad) { t = 'Wrong secret. Disconnect and connect again.'; bad = true; }
+      else if (netErr) { t = n ? 'Offline. ' + n + ' change' + (n > 1 ? 's' : '') + ' waiting to save.' : 'Cannot reach your Sheet. Showing the last copy.'; bad = true; }
+      else if (flushing || n) t = 'Saving…';
+      else if (lastSync) t = 'Synced ' + lastSync;
+      else t = 'Connecting…';
+    }
+    el.textContent = t; el.className = 'sync' + (bad ? ' bad' : '');
+  }
+  function note(t) { $('#note').textContent = t || ''; }
+  function renderSettings() {
+    var el = $('#settings'); if (!el) return;
+    el.textContent = '';
+    if (!cfg) return;
+    el.append(
+      h('button', { class: 'tbtn', type: 'button', onclick: copyLink }, 'Copy link for other devices'),
+      h('button', { class: 'tbtn danger' + (armedDisc ? ' armed' : ''), type: 'button', onclick: disconnect },
+        armedDisc ? 'Confirm: disconnect this device' : 'Disconnect'));
+    if (linkText) el.append(h('input', { type: 'text', readonly: true, value: linkText, 'aria-label': 'Link for other devices',
+      onfocus: function (e) { e.target.select(); } }));
+  }
+  function copyLink() {
+    linkText = location.origin + location.pathname + '#cfg=' + encodeURIComponent(JSON.stringify(cfg));
+    var warn = ' Open it once on your other device. Anyone with this link can read and change your jobs, so keep it private.';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(linkText).then(function () { note('Link copied.' + warn); },
+        function () { note('Select the link below and copy it.' + warn); });
+    } else { note('Select the link below and copy it.' + warn); }
+    renderSettings();
+  }
+  function disconnect() {
+    if (!armedDisc) { armedDisc = true; renderSettings(); setTimeout(function () { armedDisc = false; renderSettings(); }, 4000); return; }
+    armedDisc = false; cfg = null; jobs = []; outbox = []; loaded = false; linkText = ''; lastErr = null; netErr = false; lastSync = '';
+    try { localStorage.removeItem(LSC); localStorage.removeItem(LSD); localStorage.removeItem(LSO); } catch (e) {}
+    note(''); render();
+  }
+
+  /* ---------- form ---------- */
+  var F = { title: $('#fTitle'), time: $('#fTime'), pri: $('#fPri'), date: $('#fDate'), cat: $('#fCat'), notes: $('#fNotes'), daily: $('#fDaily'), subs: $('#fSubs') };
+  function resetForm() {
+    $('#jobForm').reset(); F.date.value = today; editingId = null;
+    $('#submitBtn').textContent = 'Add job'; $('#formHead').textContent = 'New job'; $('#cancelEdit').hidden = true;
+  }
+  function startEdit(j) {
+    editingId = j.id;
+    F.title.value = j.title; F.time.value = j.time || ''; F.pri.value = String(j.priority || 2);
+    F.date.value = j.date; F.cat.value = j.category || ''; F.notes.value = j.notes || ''; F.daily.checked = !!j.daily;
+    F.subs.value = liveSubs(j).map(function (s) { return s.text; }).join('\n');
+    $('#submitBtn').textContent = 'Save changes'; $('#formHead').textContent = 'Editing job'; $('#cancelEdit').hidden = false;
+    $('#jobForm').scrollIntoView({ block: 'center', behavior: 'smooth' }); F.title.focus();
+  }
+  $('#cancelEdit').addEventListener('click', resetForm);
+  $('#jobForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var title = F.title.value.trim();
+    if (!title) { F.title.focus(); return; }
+    var old = editingId && jobs.find(function (x) { return x.id === editingId; });
+    var base = old ? Object.assign({}, old) : {
+      id: 'j' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      status: 'todo', statusOn: today, created: Date.now(), space: space
+    };
+    delete base.example;
+    var prevSubs = liveSubs(base);
+    var subs = F.subs.value.split('\n').map(function (t) { return t.trim(); }).filter(Boolean).map(function (t) {
+      var i = prevSubs.findIndex(function (p) { return p.text === t; });
+      return i >= 0 ? prevSubs.splice(i, 1)[0] : { id: newSubId(), text: t, done: false };
+    });
+    var job = Object.assign(base, {
+      title: title, time: F.time.value, priority: +F.pri.value, category: F.cat.value.trim(),
+      date: F.date.value || today, daily: F.daily.checked, notes: F.notes.value.trim(),
+      subs: subs, subsOn: today
+    });
+    save(subs.length ? syncStatus(job, old ? eff(old) : 'todo') : job);
+    resetForm();
+  });
+
+  /* ---------- render ---------- */
+  function disarm() { armedId = null; armedClear = false; clearTimeout(armedTimer); }
+  function arm(id) {
+    disarm(); armedId = id; render();
+    armedTimer = setTimeout(function () { disarm(); render(); }, 4000);
+  }
+  function subDone(j, s) { return !!s.done && !(j.daily && j.subsOn !== today); }
+  function subCount(j) {
+    var a = j.subs || [], d = a.filter(function (s) { return subDone(j, s); }).length;
+    return [d, a.length];
+  }
+  function liveSubs(j) { return (j.subs || []).map(function (s) { return Object.assign({}, s, { done: subDone(j, s) }); }); }
+  function newSubId() { return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+  function syncStatus(j, cur) {
+    var n = j.subs.length;
+    if (!n) return j;
+    var d = j.subs.filter(function (s) { return s.done; }).length;
+    var st = d === n ? 'done' : d > 0 ? 'doing' : (cur === 'done' ? 'todo' : cur);
+    return Object.assign({}, j, { status: st, statusOn: today, subsOn: today });
+  }
+  function toggleSub(j, id) {
+    var subs = liveSubs(j).map(function (s) { return s.id === id ? Object.assign({}, s, { done: !s.done }) : s; });
+    save(syncStatus(Object.assign({}, j, { subs: subs }), eff(j)));
+  }
+  function removeSub(j, id) {
+    var subs = liveSubs(j).filter(function (s) { return s.id !== id; });
+    var o = Object.assign({}, j, { subs: subs, subsOn: today });
+    save(subs.length ? syncStatus(o, eff(j)) : o);
+  }
+  function addSub(j, text) {
+    text = text.trim();
+    if (!text) return;
+    var subs = liveSubs(j).concat([{ id: newSubId(), text: text, done: false }]);
+    save(syncStatus(Object.assign({}, j, { subs: subs }), eff(j)));
+  }
+  function setStatus(j, s) {
+    var o = Object.assign({}, j, { status: s, statusOn: today });
+    if (j.subs && j.subs.length) {
+      if (s === 'done') { o.subs = liveSubs(j).map(function (x) { return Object.assign({}, x, { done: true }); }); o.subsOn = today; }
+      else if (s === 'todo' && eff(j) === 'done') { o.subs = liveSubs(j).map(function (x) { return Object.assign({}, x, { done: false }); }); o.subsOn = today; }
+    }
+    save(o);
+  }
+  function subList(j) {
+    if (!(j.subs && j.subs.length)) return null;
+    return h('ul', { class: 'subs' }, j.subs.map(function (x) {
+      var d = subDone(j, x);
+      return h('li', { class: 'sub' + (d ? ' d' : '') },
+        h('input', { type: 'checkbox', checked: d, 'aria-label': x.text, onchange: function () { toggleSub(j, x.id); } }),
+        h('span', { class: 'st' }, x.text),
+        h('button', { class: 'x', type: 'button', 'aria-label': 'Remove sub-job: ' + x.text, onclick: function () { removeSub(j, x.id); } }, '×'));
+    }));
+  }
+  function addRow(j) {
+    var inp = h('input', { type: 'text', placeholder: 'Next sub-job, then Enter', maxlength: '160', 'aria-label': 'New sub-job', value: addDraft });
+    function commit() { var t = inp.value; if (!t.trim()) return; addDraft = ''; focusAdd = true; addSub(j, t); }
+    inp.addEventListener('input', function () { addDraft = inp.value; });
+    inp.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); commit(); }
+      else if (e.key === 'Escape') { addingId = null; addDraft = ''; render(); }
+    });
+    return h('div', { class: 'addsub' }, inp,
+      h('button', { class: 'btn', type: 'button', onclick: commit }, 'Add'),
+      h('button', { class: 'btn ghost', type: 'button', onclick: function () { addingId = null; addDraft = ''; render(); } }, 'Close'));
+  }
+
+  function row(j) {
+    var s = eff(j), isEdit = editingId === j.id;
+    var meta = [];
+    if (j.time) meta.push(h('span', { class: 'time' }, j.time));
+    if (j.date !== today && !j.daily) meta.push(h('span', null, fmtDate(j.date)));
+    if (j.category) meta.push(h('span', null, j.category));
+    var sc = subCount(j);
+    if (sc[1]) {
+      var fill = h('b');
+      fill.style.width = Math.round(sc[0] / sc[1] * 100) + '%';
+      meta.push(h('span', { class: 'mini' }, sc[0] + '/' + sc[1], h('i', null, fill)));
+    }
+    meta.push(h('span', { class: 'pill p' + (j.priority || 2) }, PRI[j.priority || 2]));
+    if (j.daily) meta.push(h('span', { class: 'pill' }, 'Daily'));
+    if (carried(j)) meta.push(h('span', { class: 'pill late' }, 'Carried over'));
+    else if (overdue(j)) meta.push(h('span', { class: 'pill late' }, 'Overdue'));
+    if (j.example) meta.push(h('span', { class: 'pill ex' }, 'Example'));
+    var armedHere = armedId === j.id;
+    return h('li', { class: 'job', 'data-s': s },
+      h('button', { class: 'tick', type: 'button', 'aria-label': s === 'done' ? 'Mark not done: ' + j.title : 'Mark done: ' + j.title,
+        onclick: function () { setStatus(j, s === 'done' ? 'todo' : 'done'); } }),
+      h('div', { class: 'body' },
+        h('div', { class: 'title' }, j.title),
+        h('div', { class: 'meta' }, meta),
+        j.notes ? h('p', { class: 'notes' }, j.notes) : null,
+        subList(j),
+        addingId === j.id ? addRow(j) : null),
+      h('div', { class: 'acts' },
+        s !== 'done' ? h('button', { class: 'tbtn', type: 'button', onclick: function () { setStatus(j, s === 'doing' ? 'todo' : 'doing'); } }, s === 'doing' ? 'Pause' : 'Start') : null,
+        h('button', { class: 'tbtn', type: 'button', onclick: function () { addingId = addingId === j.id ? null : j.id; addDraft = ''; focusAdd = addingId !== null; render(); } }, 'Add sub-job'),
+        h('button', { class: 'tbtn', type: 'button', onclick: function () { startEdit(j); } }, isEdit ? 'Editing' : 'Edit'),
+        h('button', { class: 'tbtn danger' + (armedHere ? ' armed' : ''), type: 'button',
+          onclick: function () { if (armedHere) { disarm(); remove([j.id]); } else arm(j.id); } }, armedHere ? 'Confirm delete' : 'Delete')));
+  }
+
+  function nextNote(list) {
+    var open = list.filter(function (j) { return eff(j) !== 'done'; });
+    if (!list.length) return 'Nothing scheduled yet.';
+    if (!open.length) return 'All clear for today.';
+    var n = nowHM();
+    var timed = open.filter(function (j) { return j.time && j.time >= n; }).sort(function (a, b) { return a.time < b.time ? -1 : 1; });
+    var pick = timed[0] || open.slice().sort(cmp)[0];
+    return open.length + ' left. Next: ' + (pick.time ? pick.time + ' ' : '') + pick.title;
+  }
+
+  function applyForm() {
+    var dl = $('#cats'); dl.textContent = '';
+    SPACES[space].cats.forEach(function (c) { dl.append(h('option', { value: c })); });
+    F.cat.placeholder = SPACES[space].ph;
+  }
+  function setSpace(k) {
+    if (k === space) return;
+    space = k;
+    try { localStorage.setItem(LSS, space); } catch (e) {}
+    cat = ''; catSig = null; addingId = null; addDraft = ''; disarm(); msg('');
+    resetForm(); applyForm(); render();
+  }
+
+  function renderCats() {
+    var m = {}, none = false;
+    scoped().forEach(function (j) {
+      var k = catKey(j);
+      if (k === '__none') none = true; else if (!m[k]) m[k] = (j.category || '').trim();
+    });
+    var keys = Object.keys(m).sort();
+    if (cat === '__none' ? !none : (cat && !m[cat])) cat = '';
+    var sig = keys.map(function (k) { return k + '=' + m[k]; }).join('|') + (none ? '|#' : '');
+    var sel = $('#catSel');
+    if (sig !== catSig) {
+      catSig = sig; sel.textContent = '';
+      sel.append(h('option', { value: '' }, 'All categories'));
+      keys.forEach(function (k) { sel.append(h('option', { value: k }, m[k])); });
+      if (none) sel.append(h('option', { value: '__none' }, 'No category'));
+    }
+    sel.value = cat;
+  }
+
+  function render() {
+    renderCats();
+    showApp(); renderSync(); renderSettings();
+    $('#spaceTitle').textContent = SPACES[space].name;
+    var nav = $('#spaces'); nav.textContent = '';
+    ['job', 'life'].forEach(function (k) {
+      nav.append(h('button', { type: 'button', 'aria-pressed': String(space === k), onclick: function () { setSpace(k); } }, SPACES[k].name));
+    });
+    $('#weekday').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    var td = scoped().filter(inToday), done = td.filter(function (j) { return eff(j) === 'done'; }).length;
+    $('#pdone').textContent = done; $('#ptotal').textContent = td.length;
+    $('#pbar').style.width = (td.length ? Math.round(done / td.length * 100) : 0) + '%';
+    var sd = 0, sn = 0;
+    td.forEach(function (j) { var c = subCount(j); sd += c[0]; sn += c[1]; });
+    $('#pnote').textContent = loaded ? nextNote(td) + (sn ? ' Sub-jobs ' + sd + '/' + sn + '.' : '') : '';
+
+    var tabs = $('#tabs'); tabs.textContent = '';
+    VIEWS.forEach(function (v) {
+      var n = scoped().filter(function (j) { return inView(j, v[0]) && inCat(j); }).length;
+      tabs.append(h('button', { class: 'tab', type: 'button', 'aria-pressed': String(view === v[0]),
+        onclick: function () { view = v[0]; try { localStorage.setItem(LSV, view); } catch (e) {} render(); } },
+        v[1], h('span', null, n)));
+    });
+
+    var list = $('#list'); list.textContent = '';
+    var shown = scoped().filter(function (j) { return inView(j, view) && matches(j); }).sort(cmp);
+    if (!loaded) {
+      list.append(h('li', { class: 'empty' }, h('b', null, 'Loading your jobs'), 'Saved jobs appear here in a moment.'));
+    } else if (!shown.length) {
+      var t = (q || cat) ? ['No matches', 'Try a different search word or category.'] :
+        view === 'today' ? ['Nothing scheduled for today', 'Add a job above to start your day.'] :
+        view === 'upcoming' ? ['No upcoming jobs', 'Jobs dated after today show up here.'] :
+        view === 'done' ? ['Nothing finished yet', 'Completed jobs collect here.'] : ['No jobs yet', 'Add your first job above.'];
+      list.append(h('li', { class: 'empty' }, h('b', null, t[0]), t[1]));
+    } else {
+      shown.forEach(function (j) { list.append(row(j)); });
+    }
+
+    var ai = list.querySelector('.addsub input');
+    if (ai && focusAdd) { ai.focus(); focusAdd = false; }
+
+    var foot = $('#foot'); foot.textContent = '';
+    var ex = scoped().filter(function (j) { return j.example; });
+    if (ex.length) {
+      foot.append(h('button', { class: 'tbtn danger' + (armedClear ? ' armed' : ''), type: 'button',
+        onclick: function () {
+          if (armedClear) { disarm(); remove(ex.map(function (j) { return j.id; })); }
+          else { disarm(); armedClear = true; render(); armedTimer = setTimeout(function () { disarm(); render(); }, 4000); }
+        } }, armedClear ? 'Confirm: remove ' + ex.length + ' example jobs' : 'Remove example jobs'));
+    }
+  }
+
+  $('#q').addEventListener('input', function (e) { q = e.target.value.trim().toLowerCase(); render(); });
+  $('#catSel').addEventListener('change', function (e) { cat = e.target.value; render(); });
+  setInterval(function () {
+    var t = ymd(new Date());
+    if (t !== today) { today = t; if (!editingId) F.date.value = t; }
+    if (addingId === null) render();
+  }, 60000);
+
+  resetForm();
+  applyForm();
+  render();
+  window.addEventListener('hashchange', function () {
+    try { var hh = (location.hash || '').replace('#', ''); if (hh === 'job' || hh === 'life') setSpace(hh); } catch (e) {}
+  });
+
+  /* ---------- start ---------- */
+  (function () {
+    var cached = lsGet(LSD, null);
+    if (cfg && Array.isArray(cached)) { jobs = cached.map(norm); loaded = true; }
+  })();
+  render();
+  flush();
+  pull(true);
+  setInterval(function () { pull(); }, 20000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { flush(); pull(); } });
+  window.addEventListener('online', function () { netErr = false; flush(); pull(); });
+
+  function setupMsg(t) { $('#setupMsg').textContent = t || ''; }
+  $('#setupForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var url = $('#sUrl').value.trim(), key = $('#sKey').value.trim();
+    if (!/^https:\/\/script\.google\.com\/(a\/[^\/]+\/)?macros\/s\/[^\/]+\/exec/.test(url)) {
+      setupMsg('That does not look like a Web app URL. It should start with https://script.google.com/macros/s/ and end with /exec.'); return;
+    }
+    if (!key) { setupMsg('Enter the secret you set in the script.'); $('#sKey').focus(); return; }
+    setupMsg('Connecting…');
+    var prev = cfg; cfg = { url: url, key: key };
+    api({ action: 'list' }).then(function (d) {
+      lsSet(LSC, cfg); jobs = (d.jobs || []).map(norm); loaded = true; netErr = false; lastErr = null;
+      lsSet(LSD, jobs); stamp(); setupMsg(''); $('#sKey').value = ''; render();
+    }, function (er) { cfg = prev; setupMsg(errText(er)); });
+  });
+})();
+</script>
+
+</body>
+</html>
